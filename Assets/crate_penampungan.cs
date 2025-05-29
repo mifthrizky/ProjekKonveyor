@@ -12,7 +12,7 @@ public class crate_penampungan : MonoBehaviour
         if (other.CompareTag("Box"))
         {
             Debug.Log(">> Box terdeteksi, forklift jalan!");
-            dollyCart.m_Speed = 5f;
+            dollyCart.m_Speed = 2f;
         }
     }
 
