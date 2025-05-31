@@ -1,23 +1,22 @@
 using UnityEngine;
-using System.Collections.Generic; // Untuk menggunakan List
+using System.Collections.Generic;
 
 public class ContainerController : MonoBehaviour
 {
     public int maxBoxCount = 5;
     private int currentBoxCount = 0;
-    private List<GameObject> boxesInContainer = new List<GameObject>(); // Untuk melacak box
+    private List<GameObject> boxesInContainer = new List<GameObject>();
 
-    public ForkliftController forklift; // Referensi ke skrip forklift
+    public ForkliftController forklift;
     public bool isFull = false;
-    public bool isBeingCarried = false;
+    public bool isBeingCarried = false; // Akan dikontrol oleh metode SecureBoxesForTransport
 
-    // Opsional: Untuk mereset setelah forklift selesai
-    public Transform boxSpawnPoint; // Jika box ingin di-spawn ulang atau dipindahkan
-    public GameObject boxPrefab;    // Jika box ingin di-spawn ulang
+    public Transform boxSpawnPoint;
+    public GameObject boxPrefab;
 
     void OnTriggerEnter(Collider other)
     {
-        if (isFull || isBeingCarried) return; // Jangan hitung jika sudah penuh atau sedang diangkut
+        if (isFull || isBeingCarried) return;
 
         if (other.CompareTag("Box") && !boxesInContainer.Contains(other.gameObject))
         {
@@ -25,17 +24,18 @@ public class ContainerController : MonoBehaviour
             currentBoxCount = boxesInContainer.Count;
             Debug.Log("Box masuk: " + other.gameObject.name + ". Total: " + currentBoxCount);
 
-            // Hancurkan box yang masuk atau nonaktifkan agar tidak dihitung lagi
-            // other.gameObject.SetActive(false);
-            // Atau jika box punya Rigidbody dan harus diam di wadah:
+            // 1. Jadikan box sebagai child dari wadah ini
+            other.transform.SetParent(this.transform);
+            // Opsional: Reset posisi lokal box jika perlu agar rapi di dalam wadah
+            // other.transform.localPosition = new Vector3(Random.Range(-0.2f, 0.2f), other.transform.localPosition.y, Random.Range(-0.2f, 0.2f));
+            // other.transform.localRotation = Quaternion.identity;
+
             // Rigidbody boxRb = other.GetComponent<Rigidbody>();
             // if (boxRb != null)
             // {
-            //     boxRb.isKinematic = true; // Hentikan gerakan fisika box di dalam wadah
+            //     // Biarkan fisika box berjalan normal sampai forklift mengangkatnya
+            //     // boxRb.isKinematic = false; // Pastikan tidak kinematic awalnya
             // }
-            // Pindahkan box sedikit ke dalam wadah agar terlihat rapi
-            // other.transform.SetParent(transform); // Opsional: jadikan box child dari wadah
-
 
             if (currentBoxCount >= maxBoxCount)
             {
@@ -53,45 +53,54 @@ public class ContainerController : MonoBehaviour
         }
     }
 
-    void OnTriggerExit(Collider other)
+    // Metode baru untuk mengamankan atau melepaskan box
+    public void SecureBoxesForTransport(bool secure)
     {
-        // Jika Anda ingin box bisa keluar dan mengurangi hitungan (mungkin tidak relevan untuk kasus ini)
-        if (other.CompareTag("Box") && boxesInContainer.Contains(other.gameObject))
+        this.isBeingCarried = secure; // Tandai bahwa wadah sedang/tidak sedang diangkut
+        // Debug.Log("Container " + this.gameObject.name + " isBeingCarried: " + this.isBeingCarried);
+
+        foreach (GameObject boxGO in boxesInContainer)
         {
-            // Hanya hapus jika tidak sedang diangkut atau jika logika Anda mengizinkan
-            if (!isBeingCarried)
+            if (boxGO == null) continue; // Jaga-jaga jika box sudah hancur
+
+            Rigidbody boxRb = boxGO.GetComponent<Rigidbody>();
+            if (boxRb != null)
             {
-                boxesInContainer.Remove(other.gameObject);
-                currentBoxCount = boxesInContainer.Count;
-                Debug.Log("Box keluar: " + other.gameObject.name + ". Total: " + currentBoxCount);
-                isFull = false; // Wadah tidak lagi penuh
+                boxRb.isKinematic = secure; // Kunci atau lepaskan fisika box
+                // Jika melepaskan (secure == false) dan box masih child,
+                // dan Anda tidak menghancurkannya, ia akan tetap di wadah
+                // sampai ada gaya yang mengeluarkannya.
             }
         }
+        // Debug.Log("Boxes in " + this.gameObject.name + " set to kinematic: " + secure);
     }
 
     public void ResetContainer()
     {
-        Debug.Log("Mereset Wadah.");
-        // Hancurkan atau pindahkan semua box yang ada di wadah
+        Debug.Log("Mereset Wadah: " + this.gameObject.name);
+
+        // Sebelum menghancurkan, pastikan mereka tidak lagi kinematic jika akan di-pool,
+        // tapi karena kita destroy, tidak terlalu masalah.
+        // SecureBoxesForTransport(false); // Opsional jika box tidak langsung dihancurkan
+
         foreach (GameObject box in boxesInContainer)
         {
-            // Contoh: Hancurkan box
-            // Destroy(box);
-
-            // Contoh: Pindahkan box ke suatu tempat (jika Anda punya pool atau ingin digunakan lagi)
-            if (boxSpawnPoint != null && boxPrefab != null) // Atau nonaktifkan saja
+            if (box != null) // Selalu cek null sebelum destroy
             {
-                // box.transform.position = boxSpawnPoint.position;
-                // box.SetActive(true); // Jika dinonaktifkan sebelumnya
-                Destroy(box); // Paling mudah untuk demo
-            } else {
+                // Jika box di-parent, tidak perlu un-parent jika langsung di-destroy.
+                // Jika tidak di-destroy dan ingin box keluar dari parent:
+                // box.transform.SetParent(null);
                 Destroy(box);
             }
         }
         boxesInContainer.Clear();
         currentBoxCount = 0;
         isFull = false;
+        // isBeingCarried akan diatur oleh SecureBoxesForTransport(false) saat dilepas
+        // Namun karena ResetContainer dipanggil setelah PerformDrop,
+        // pastikan isBeingCarried juga false di sini untuk kejelasan.
         isBeingCarried = false;
-        // Mungkin Anda ingin memindahkan wadah kembali ke posisi semula jika ia dipindahkan oleh forklift
     }
+
+    // (Sisa OnTriggerExit jika ada...)
 }

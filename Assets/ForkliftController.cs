@@ -128,22 +128,21 @@ public class ForkliftController : MonoBehaviour
         if (currentTargetContainer != null && containerPickupTransform != null)
         {
             Debug.Log("Mengambil " + currentTargetContainer.name);
-            currentTargetContainer.isBeingCarried = true;
+            // currentTargetContainer.isBeingCarried = true; // Ini akan dihandle oleh SecureBoxesForTransport
 
-            // Matikan fisika wadah jika ada, agar tidak bentrok
             Rigidbody containerRb = currentTargetContainer.GetComponent<Rigidbody>();
             if (containerRb != null)
             {
                 containerRb.isKinematic = true;
             }
 
-            // Smoothly move container to attachment point (Optional, bisa langsung parent)
-            // Untuk animasi lebih smooth, bisa pakai Lerp atau iTween/DOTween
             currentTargetContainer.transform.SetParent(forkAttachmentPoint);
-            currentTargetContainer.transform.localPosition = Vector3.zero + Vector3.up * liftHeight; // Naikkan sedikit
-            currentTargetContainer.transform.localRotation = Quaternion.identity; // Reset rotasi relatif
+            currentTargetContainer.transform.localPosition = Vector3.zero + Vector3.up * liftHeight;
+            currentTargetContainer.transform.localRotation = Quaternion.identity;
 
-            // Setelah pickup, kembali ke start position
+            // 2. Beri tahu wadah untuk mengamankan box-box di dalamnya
+            currentTargetContainer.SecureBoxesForTransport(true);
+
             agent.isStopped = false;
             agent.SetDestination(forkliftStartPosition.position);
             currentState = ForkliftState.MovingToStartPosition;
@@ -156,39 +155,44 @@ public class ForkliftController : MonoBehaviour
         if (currentTargetContainer != null)
         {
             Debug.Log("Meletakkan " + currentTargetContainer.name);
-            currentTargetContainer.transform.SetParent(null); // Lepas dari forklift
-            currentTargetContainer.isBeingCarried = false;
 
-            // Posisikan wadah dengan rapi di lantai (sesuaikan Y jika perlu)
-            Vector3 dropPosition = new Vector3(transform.position.x, 0, transform.position.z); // Asumsi lantai di Y=0
-             // Coba offset agar tidak pas di bawah forklift
-            dropPosition += forkliftStartPosition.forward * 2f; // Letakkan 2 unit di depan posisi start forklift
-            dropPosition.y = currentTargetContainer.transform.position.y - liftHeight; // Kembalikan ke ketinggian semula relatif
+            // 3. Beri tahu wadah untuk "melepaskan" box-box (mengembalikan fisikanya jika perlu)
+            // Ini dipanggil sebelum ResetContainer, yang mana akan menghancurkan box.
+            // Jadi, efek utamanya adalah mengembalikan isKinematic ke false jika box tidak langsung dihancurkan.
+            currentTargetContainer.SecureBoxesForTransport(false);
 
+            currentTargetContainer.transform.SetParent(null);
+            // ... (Pengaturan posisi drop wadah) ...
+            Vector3 dropPosition = forkliftStartPosition.position + forkliftStartPosition.forward * 2f;
+            dropPosition.y = currentTargetContainer.transform.position.y - liftHeight; // Asumsi ketinggian lantai
+            // Raycast ke bawah untuk posisi Y yang lebih akurat jika lantai tidak rata:
+            RaycastHit hit;
+            if (Physics.Raycast(new Vector3(dropPosition.x, transform.position.y + 1f, dropPosition.z), Vector3.down, out hit, 5f)) {
+                dropPosition.y = hit.point.y + (currentTargetContainer.GetComponent<Collider>() != null ? currentTargetContainer.GetComponent<Collider>().bounds.extents.y : 0);
+            } else {
+                 // Jika tidak ada hit, gunakan posisi yang sudah dihitung (dikurangi liftHeight)
+                // atau set ke Y=0 jika itu lantai Anda
+                dropPosition.y = currentTargetContainer.transform.position.y - liftHeight;
+            }
             currentTargetContainer.transform.position = dropPosition;
 
 
-            // Aktifkan kembali fisika jika perlu
             Rigidbody containerRb = currentTargetContainer.GetComponent<Rigidbody>();
             if (containerRb != null)
             {
-                containerRb.isKinematic = false; // Atau true jika wadah harus diam setelah diletakkan
+                containerRb.isKinematic = false;
             }
 
-            // Reset wadah untuk siklus berikutnya
-            currentTargetContainer.ResetContainer();
+            currentTargetContainer.ResetContainer(); // Ini akan menghancurkan box-box
             currentTargetContainer = null;
             containerPickupTransform = null;
         }
 
-        // Kembali ke state Idle
-        // Mungkin forklift perlu berputar kembali ke orientasi awalnya jika penting
         transform.rotation = forkliftStartPosition.rotation;
-        agent.isStopped = false; // Siap untuk tugas berikutnya
+        agent.isStopped = false;
         currentState = ForkliftState.Idle;
         Debug.Log("Wadah diletakkan. Forklift Idle.");
     }
-
     // Gizmos untuk visualisasi di editor
     void OnDrawGizmosSelected()
     {
