@@ -9,98 +9,92 @@ public class ContainerController : MonoBehaviour
 
     public ForkliftController forklift;
     public bool isFull = false;
-    public bool isBeingCarried = false; // Akan dikontrol oleh metode SecureBoxesForTransport
+    public bool isBeingCarried = false;
 
-    public Transform boxSpawnPoint;
-    public GameObject boxPrefab;
+    // Tag baru untuk menandai box yang sudah diproses
+    public string processedBoxTag = "ProcessedBox"; // Anda bisa atur ini di Inspector jika mau
 
     void OnTriggerEnter(Collider other)
     {
         if (isFull || isBeingCarried) return;
 
+        // Hanya proses jika tag-nya "Box" (box baru)
         if (other.CompareTag("Box") && !boxesInContainer.Contains(other.gameObject))
         {
             boxesInContainer.Add(other.gameObject);
             currentBoxCount = boxesInContainer.Count;
-            Debug.Log("Box masuk: " + other.gameObject.name + ". Total: " + currentBoxCount);
+            Debug.Log("Box masuk: " + other.gameObject.name + ". Total di '" + this.name + "': " + currentBoxCount);
 
-            // 1. Jadikan box sebagai child dari wadah ini
             other.transform.SetParent(this.transform);
-            // Opsional: Reset posisi lokal box jika perlu agar rapi di dalam wadah
-            // other.transform.localPosition = new Vector3(Random.Range(-0.2f, 0.2f), other.transform.localPosition.y, Random.Range(-0.2f, 0.2f));
-            // other.transform.localRotation = Quaternion.identity;
-
-            // Rigidbody boxRb = other.GetComponent<Rigidbody>();
-            // if (boxRb != null)
-            // {
-            //     // Biarkan fisika box berjalan normal sampai forklift mengangkatnya
-            //     // boxRb.isKinematic = false; // Pastikan tidak kinematic awalnya
-            // }
 
             if (currentBoxCount >= maxBoxCount)
             {
                 isFull = true;
-                Debug.Log("Wadah Penuh! Memanggil Forklift.");
+                Debug.Log("Wadah '" + this.name + "' Penuh! Memanggil Forklift.");
                 if (forklift != null)
                 {
                     forklift.GoToContainer(this);
                 }
                 else
                 {
-                    Debug.LogError("Referensi ForkliftController belum di-assign di ContainerController!");
+                    Debug.LogError("Referensi ForkliftController belum di-assign pada ContainerController di '" + this.name + "'!");
                 }
             }
         }
     }
 
-    // Metode baru untuk mengamankan atau melepaskan box
     public void SecureBoxesForTransport(bool secure)
     {
-        this.isBeingCarried = secure; // Tandai bahwa wadah sedang/tidak sedang diangkut
-        // Debug.Log("Container " + this.gameObject.name + " isBeingCarried: " + this.isBeingCarried);
-
+        this.isBeingCarried = secure;
         foreach (GameObject boxGO in boxesInContainer)
         {
-            if (boxGO == null) continue; // Jaga-jaga jika box sudah hancur
-
+            if (boxGO == null) continue;
             Rigidbody boxRb = boxGO.GetComponent<Rigidbody>();
             if (boxRb != null)
             {
-                boxRb.isKinematic = secure; // Kunci atau lepaskan fisika box
-                // Jika melepaskan (secure == false) dan box masih child,
-                // dan Anda tidak menghancurkannya, ia akan tetap di wadah
-                // sampai ada gaya yang mengeluarkannya.
+                boxRb.isKinematic = secure;
             }
         }
-        // Debug.Log("Boxes in " + this.gameObject.name + " set to kinematic: " + secure);
+        Debug.Log("Box di dalam '" + this.name + "' telah diatur kinematic: " + secure);
     }
 
     public void ResetContainer()
     {
-        Debug.Log("Mereset Wadah: " + this.gameObject.name);
+        Debug.Log("Mereset Wadah secara logika: '" + this.name + "'. Box fisik lama akan diubah tag-nya.");
 
-        // Sebelum menghancurkan, pastikan mereka tidak lagi kinematic jika akan di-pool,
-        // tapi karena kita destroy, tidak terlalu masalah.
-        // SecureBoxesForTransport(false); // Opsional jika box tidak langsung dihancurkan
+        // Penting: SecureBoxesForTransport(false) sudah dipanggil oleh ForkliftController sebelumnya,
+        // jadi box-box di `boxesInContainer` (sebelum di-clear) sudah non-kinematic.
 
-        foreach (GameObject box in boxesInContainer)
+        // Iterate SEMUA child transform dari wadah ini.
+        // Box-box dari muatan sebelumnya adalah child dari wadah ini.
+        List<Transform> childrenToProcess = new List<Transform>();
+        foreach (Transform child in transform) // 'transform' adalah transform dari GameObject wadah ini
         {
-            if (box != null) // Selalu cek null sebelum destroy
+            childrenToProcess.Add(child); // Tambahkan ke list sementara untuk menghindari masalah modifikasi saat iterasi
+        }
+
+        foreach (Transform childBoxTransform in childrenToProcess)
+        {
+            // Hanya ubah tag jika memang itu box yang perlu diproses (misalnya, masih bertag "Box")
+            // atau jika Anda ingin menandai semua child yang merupakan box.
+            if (childBoxTransform.CompareTag("Box")) // Hanya ubah tag jika masih "Box"
             {
-                // Jika box di-parent, tidak perlu un-parent jika langsung di-destroy.
-                // Jika tidak di-destroy dan ingin box keluar dari parent:
-                // box.transform.SetParent(null);
-                Destroy(box);
+                childBoxTransform.tag = processedBoxTag; // Ganti tag-nya
+                Debug.Log("Mengubah tag untuk box lama: '" + childBoxTransform.name + "' menjadi '" + processedBoxTag + "'");
+
+                // Pastikan juga fisika aktif jika belum (walaupun SecureBoxesForTransport(false) seharusnya sudah)
+                Rigidbody rb = childBoxTransform.GetComponent<Rigidbody>();
+                if (rb != null && rb.isKinematic)
+                {
+                    rb.isKinematic = false;
+                }
             }
         }
+
+        // Kosongkan list referensi box internal dan reset status
         boxesInContainer.Clear();
         currentBoxCount = 0;
         isFull = false;
-        // isBeingCarried akan diatur oleh SecureBoxesForTransport(false) saat dilepas
-        // Namun karena ResetContainer dipanggil setelah PerformDrop,
-        // pastikan isBeingCarried juga false di sini untuk kejelasan.
-        isBeingCarried = false;
+        isBeingCarried = false; // Pastikan status ini juga false
     }
-
-    // (Sisa OnTriggerExit jika ada...)
 }
