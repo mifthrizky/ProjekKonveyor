@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 2
   tags:
   - Box
+  - SpawnPoint
+  - BoxMentah
+  - BarcodeScanner
+
   layers:
   - Default
   - TransparentFX
@@ -12,8 +16,8 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
+  - Hands
+  - Interactive
   - XR Teleport
   - Post-Processing
   - 

@@ -17,11 +17,22 @@ public class ConveyorBelt : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        for(int i = 0; i <= onBelt.Count -1; i++) 
+        for (int i = onBelt.Count - 1; i >= 0; i--) // Loop mundur agar aman saat remove
         {
-            onBelt[i].GetComponent<Rigidbody>().velocity = speed * direction;
+            if (onBelt[i] == null) // Jika object sudah dihancurkan, hapus dari list
+            {
+                onBelt.RemoveAt(i);
+                continue;
+            }
+
+            Rigidbody rb = onBelt[i].GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.velocity = speed * direction;
+            }
         }
     }
+
 
     //When something collider with the belt
     private void OnCollisionEnter(Collision collision)
