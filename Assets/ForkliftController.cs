@@ -3,6 +3,7 @@ using UnityEngine.AI; // Penting untuk NavMeshAgent
 
 public class ForkliftController : MonoBehaviour
 {
+    public static ForkliftController instances;
     private NavMeshAgent agent;
     public Transform forkliftStartPosition; // Titik awal dan kembali forklift
     public Transform forkAttachmentPoint;   // Titik di garpu forklift tempat wadah menempel
@@ -23,6 +24,11 @@ public class ForkliftController : MonoBehaviour
     public float pickupDistanceThreshold = 1.5f; // Jarak untuk dianggap sampai dan mengambil
     public float dropDistanceThreshold = 1.5f;   // Jarak untuk dianggap sampai dan meletakkan
     public float liftHeight = 0.5f; // Seberapa tinggi wadah diangkat (relatif terhadap attachment point)
+
+    void Awake()
+    {
+        instances = this;
+    }
 
     void Start()
     {
@@ -49,7 +55,6 @@ public class ForkliftController : MonoBehaviour
             transform.position = forkliftStartPosition.position;
             transform.rotation = forkliftStartPosition.rotation;
         }
-
 
         if (forkAttachmentPoint == null)
         {

@@ -3,11 +3,9 @@ using System.Collections.Generic;
 
 public class ContainerController : MonoBehaviour
 {
-    public int maxBoxCount = 5;
-    private int currentBoxCount = 0;
+    public static int maxBoxCount = 3;
     private List<GameObject> boxesInContainer = new List<GameObject>();
 
-    public ForkliftController forklift;
     public bool isFull = false;
     public bool isBeingCarried = false;
 
@@ -22,23 +20,23 @@ public class ContainerController : MonoBehaviour
         if (other.CompareTag("Box") && !boxesInContainer.Contains(other.gameObject))
         {
             boxesInContainer.Add(other.gameObject);
-            currentBoxCount = boxesInContainer.Count;
-            Debug.Log("Box masuk: " + other.gameObject.name + ". Total di '" + this.name + "': " + currentBoxCount);
+            Debug.Log("Box masuk: " + other.gameObject.name + ". Total di '" + this.name + "': " + boxesInContainer.Count);
 
-            other.transform.SetParent(this.transform);
-
-            if (currentBoxCount >= maxBoxCount)
+            if (boxesInContainer.Count >= maxBoxCount)
             {
                 isFull = true;
                 Debug.Log("Wadah '" + this.name + "' Penuh! Memanggil Forklift.");
-                if (forklift != null)
-                {
-                    forklift.GoToContainer(this);
-                }
+                
+                foreach (GameObject g in boxesInContainer)
+                    g.transform.SetParent(this.transform);
+
+                ForkliftController.instances.GoToContainer(this);
+                /*
                 else
                 {
                     Debug.LogError("Referensi ForkliftController belum di-assign pada ContainerController di '" + this.name + "'!");
                 }
+                */
             }
         }
     }
@@ -93,7 +91,6 @@ public class ContainerController : MonoBehaviour
 
         // Kosongkan list referensi box internal dan reset status
         boxesInContainer.Clear();
-        currentBoxCount = 0;
         isFull = false;
         isBeingCarried = false; // Pastikan status ini juga false
     }

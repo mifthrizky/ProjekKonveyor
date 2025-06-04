@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03bbdf34419fb2843a3ebd1a879d4632, type: 3}
   m_Name: SceneObjectTags
   m_EditorClassIdentifier: 
-  tags: []
+  tags:
+  - label: Box
+    guidString: 92a191e4-082f-4ce7-b9cd-5e16cff3458e

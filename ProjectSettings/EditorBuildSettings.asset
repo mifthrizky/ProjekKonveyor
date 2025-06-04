@@ -5,9 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
+  - enabled: 0
+    path: Assets/Scenes/AKUWAREHOUSE.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   - enabled: 1
     path: Assets/Scenes/WarehouseSceneRauf.unity
-    guid: 9fc0d4010bbf28b4594072e72b8655ab
+    guid: 75aa3a7916906f645ba5e77aa8993424
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: c8c8f7ae715e3cc48b9fed473a5e6adb, type: 2}
     com.unity.addressableassets: {fileID: 11400000, guid: 5eb88cac93fbac94eb99ee6685b9f1b1, type: 2}
