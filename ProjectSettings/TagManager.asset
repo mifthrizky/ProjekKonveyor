@@ -4,9 +4,11 @@
 TagManager:
   serializedVersion: 2
   tags:
+  - Box
   - SpawnPoint
   - BoxMentah
   - BarcodeScanner
+
   layers:
   - Default
   - TransparentFX
