@@ -102,10 +102,11 @@ namespace VRBuilder.XRInteraction.Properties
             UseEnded?.Invoke(new UsablePropertyEventArgs());
         }
 
+        
         protected override void InternalSetLocked(bool lockState)
         {
             Interactable.IsUsable = lockState == false;
-            
+
             if (IsBeingUsed)
             {
                 if (lockState)

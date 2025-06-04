@@ -6,6 +6,7 @@ TagManager:
   tags:
   - SpawnPoint
   - BoxMentah
+  - BarcodeScanner
   layers:
   - Default
   - TransparentFX
@@ -13,8 +14,8 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
+  - Hands
+  - Interactive
   - XR Teleport
   - Post-Processing
   - 
